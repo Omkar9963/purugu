@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Purugu – insect and pest ID for natural farming</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐞</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anek+Telugu:wdth,wght@75..125,300..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F1F3EA; --sheet:#FFFFFF; --ink:#1A241C; --muted:#5A675C; --line:#D3DAC6;
+  --leaf:#2E6B34; --leaf-ink:#FFFFFF; --leaf-soft:#E2ECDA;
+  --pest:#A8322D; --pest-soft:#F6E1DD;
+  --friend:#2E6B34; --friend-soft:#DDEBD6;
+  --calm:#556358; --calm-soft:#E5E9E1;
+  --sun:#E8B12A;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#141A15; --sheet:#1D251E; --ink:#E7ECE3; --muted:#A3AFA4; --line:#334036;
+    --leaf:#6FB26F; --leaf-ink:#0E1A10; --leaf-soft:#22362A;
+    --pest:#E2766E; --pest-soft:#3A2220;
+    --friend:#6FB26F; --friend-soft:#22362A;
+    --calm:#A3AFA4; --calm-soft:#283028;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141A15; --sheet:#1D251E; --ink:#E7ECE3; --muted:#A3AFA4; --line:#334036;
+  --leaf:#6FB26F; --leaf-ink:#0E1A10; --leaf-soft:#22362A;
+  --pest:#E2766E; --pest-soft:#3A2220;
+  --friend:#6FB26F; --friend-soft:#22362A;
+  --calm:#A3AFA4; --calm-soft:#283028;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Anek Telugu","Noto Sans Telugu","Nirmala UI",system-ui,sans-serif;
+  font-size:17px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:560px; margin:0 auto; padding:0 18px 40px}
+img{max-width:100%; display:block}
+button,input,select,textarea{font:inherit; color:inherit}
+:focus-visible{outline:3px solid var(--sun); outline-offset:2px}
+
+/* Header */
+header{padding:22px 0 8px; display:flex; align-items:flex-end; justify-content:space-between; gap:12px}
+.mark{margin:0; line-height:.9}
+.mark .te{display:block; font-size:44px; font-weight:800; font-stretch:118%; letter-spacing:-.01em; color:var(--leaf)}
+.mark .en{display:block; font-size:15px; font-weight:500; font-stretch:80%; color:var(--muted); margin-top:6px}
+nav{display:flex; gap:4px; background:var(--sheet); border:1px solid var(--line); border-radius:999px; padding:4px}
+nav button{border:0; background:none; padding:6px 12px; border-radius:999px; font-size:14px; font-weight:600; cursor:pointer; color:var(--muted)}
+nav button[aria-selected="true"]{background:var(--leaf); color:var(--leaf-ink)}
+
+section[hidden]{display:none}
+
+/* Viewfinder */
+.finder{
+  position:relative; margin-top:16px; aspect-ratio:1/1; border-radius:22px;
+  background:var(--sheet); border:1px solid var(--line); overflow:hidden;
+  display:grid; place-items:center;
+}
+.finder img{width:100%; height:100%; object-fit:cover}
+.finder .hint{text-align:center; color:var(--muted); padding:24px; max-width:280px}
+.finder .hint strong{display:block; color:var(--ink); font-size:19px; font-weight:600}
+.br{position:absolute; width:42px; height:42px; border:4px solid var(--leaf); pointer-events:none}
+.br.tl{top:16px; left:16px; border-right:0; border-bottom:0; border-top-left-radius:12px}
+.br.tr{top:16px; right:16px; border-left:0; border-bottom:0; border-top-right-radius:12px}
+.br.bl{bottom:16px; left:16px; border-right:0; border-top:0; border-bottom-left-radius:12px}
+.br.brr{bottom:16px; right:16px; border-left:0; border-top:0; border-bottom-right-radius:12px}
+.finder.scanning .scan{
+  position:absolute; left:0; right:0; height:3px; background:var(--sun);
+  box-shadow:0 0 18px 4px var(--sun); animation:scan 1.6s ease-in-out infinite alternate;
+}
+@keyframes scan{from{top:8%} to{top:92%}}
+@media (prefers-reduced-motion: reduce){.finder.scanning .scan{animation:none; top:50%}}
+
+.pick{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px}
+.btn{
+  display:flex; align-items:center; justify-content:center; gap:8px; min-height:50px;
+  border-radius:14px; border:1px solid var(--line); background:var(--sheet);
+  font-weight:600; cursor:pointer; padding:10px 14px; text-align:center;
+}
+.btn.primary{background:var(--leaf); color:var(--leaf-ink); border-color:var(--leaf); font-size:19px; min-height:58px; width:100%}
+.btn.primary:disabled{opacity:.45; cursor:not-allowed}
+.btn.small{min-height:40px; font-size:14px; padding:6px 12px}
+.btn.danger{color:var(--pest)}
+
+.fields{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0}
+label{display:block; font-size:14px; font-weight:600; color:var(--muted); margin-bottom:4px}
+input[type=text],input[type=password],select,textarea{
+  width:100%; min-height:46px; padding:10px 12px; border-radius:12px;
+  border:1px solid var(--line); background:var(--sheet);
+}
+textarea{min-height:70px; resize:vertical}
+.full{grid-column:1/-1}
+.check{display:flex; gap:8px; align-items:center; font-size:15px; color:var(--ink); font-weight:500}
+.check input{width:20px; height:20px; accent-color:var(--leaf)}
+
+.msg{margin-top:14px; padding:12px 14px; border-radius:12px; background:var(--pest-soft); color:var(--pest); font-weight:500}
+.msg.ok{background:var(--leaf-soft); color:var(--leaf)}
+
+/* Result */
+.result{margin-top:22px}
+.verdict{border-radius:20px; padding:18px 18px 16px; position:relative}
+.verdict.pest{background:var(--pest-soft)}
+.verdict.beneficial{background:var(--friend-soft)}
+.verdict.harmless,.verdict.unknown{background:var(--calm-soft)}
+.stamp{display:inline-block; font-weight:800; font-stretch:115%; font-size:15px; padding:3px 12px; border-radius:999px; color:#fff}
+.pest .stamp{background:var(--pest)}
+.beneficial .stamp{background:var(--friend)}
+.harmless .stamp,.unknown .stamp{background:var(--calm)}
+:root[data-theme="dark"] .stamp, .stamp{color:var(--paper)}
+.verdict h2{margin:10px 0 0; font-size:30px; line-height:1.15; font-weight:700}
+.verdict .te-name{font-size:22px; font-weight:600; margin-top:2px}
+.verdict .sci{font-style:italic; color:var(--muted); margin-top:4px}
+.facts{display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:12px; font-size:15px}
+.facts span b{font-weight:600}
+
+.block{padding:16px 2px; border-bottom:1px solid var(--line)}
+.block:last-child{border-bottom:0}
+.block h3{margin:0 0 6px; font-size:19px; font-weight:700}
+.block p{margin:0}
+.block ul{margin:4px 0 0; padding-left:20px}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip{background:var(--sheet); border:1px solid var(--line); border-radius:999px; padding:2px 12px; font-size:15px}
+
+.remedy{background:var(--sheet); border:1px solid var(--line); border-radius:16px; padding:14px 16px; margin-top:10px}
+.remedy h4{margin:0; font-size:18px}
+.remedy .when{color:var(--muted); font-size:15px; margin:2px 0 8px}
+.remedy .ing{font-size:15px; margin-bottom:6px}
+.remedy ol{margin:0; padding-left:22px}
+.remedy ol li{margin:3px 0}
+.caution{font-size:14px; color:var(--muted); margin-top:16px}
+.actions{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px}
+
+/* Log */
+.loghead{display:flex; justify-content:space-between; align-items:center; margin:20px 0 8px; gap:10px}
+.loghead h2{margin:0; font-size:24px}
+.entry{display:grid; grid-template-columns:72px 1fr; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); cursor:pointer; background:none; border-left:0; border-right:0; border-top:0; text-align:left; width:100%}
+.entry img{width:72px; height:72px; object-fit:cover; border-radius:12px}
+.entry .t{font-weight:600; font-size:17px}
+.entry .s{font-size:14px; color:var(--muted)}
+.dot{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle}
+.dot.pest{background:var(--pest)} .dot.beneficial{background:var(--friend)} .dot.harmless,.dot.unknown{background:var(--calm)}
+.empty{color:var(--muted); padding:30px 0; text-align:center}
+
+/* Settings */
+.panel{background:var(--sheet); border:1px solid var(--line); border-radius:18px; padding:18px; margin-top:20px}
+.panel h2{margin:0 0 4px; font-size:22px}
+.panel p{margin:0 0 14px; color:var(--muted); font-size:15px}
+.stack{display:grid; gap:12px}
+footer{margin-top:30px; font-size:13px; color:var(--muted); text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 class="mark"><span class="te">పురుగు</span><span class="en">Purugu – insect &amp; pest ID</span></h1>
+    <nav role="tablist" aria-label="Sections">
+      <button role="tab" data-tab="identify" aria-selected="true">Identify</button>
+      <button role="tab" data-tab="log" aria-selected="false">Log</button>
+      <button role="tab" data-tab="settings" aria-selected="false" aria-label="Settings">⚙︎</button>
+    </nav>
+  </header>
+
+  <!-- IDENTIFY -->
+  <section id="identify">
+    <div class="finder" id="finder">
+      <div class="hint" id="hint"><strong>Photograph the insect or the damaged leaf</strong>Get close, keep it in focus, and use daylight.</div>
+      <img id="preview" alt="Selected photo" hidden>
+      <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br brr"></span>
+      <div class="scan"></div>
+    </div>
+
+    <div class="pick">
+      <label class="btn" style="margin:0;color:var(--ink);font-size:16px">📷 Take photo
+        <input type="file" accept="image/*" capture="environment" id="camIn" hidden>
+      </label>
+      <label class="btn" style="margin:0;color:var(--ink);font-size:16px">🖼 From gallery
+        <input type="file" accept="image/*" id="galIn" hidden>
+      </label>
+    </div>
+
+    <div class="fields">
+      <div>
+        <label for="crop">Crop (optional)</label>
+        <input type="text" id="crop" placeholder="e.g. Paddy, Chilli" list="crops">
+        <datalist id="crops">
+          <option>Paddy</option><option>Chilli</option><option>Cotton</option><option>Groundnut</option>
+          <option>Maize</option><option>Redgram</option><option>Blackgram</option><option>Greengram</option>
+          <option>Tomato</option><option>Brinjal</option><option>Bhendi</option><option>Banana</option><option>Mango</option>
+        </datalist>
+      </div>
+      <div>
+        <label for="lang">Answer in</label>
+        <select id="lang">
+          <option value="te">తెలుగు</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <div class="full">
+        <label for="note">What did you see? (optional)</label>
+        <input type="text" id="note" placeholder="e.g. holes in leaves, found under the leaf">
+      </div>
+    </div>
+
+    <button class="btn primary" id="goBtn" disabled>Identify</button>
+    <div id="msg" class="msg" hidden></div>
+    <div id="result" class="result"></div>
+  </section>
+
+  <!-- LOG -->
+  <section id="log" hidden>
+    <div class="loghead">
+      <h2>Field log</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn small" id="csvBtn">Export CSV</button>
+        <button class="btn small danger" id="clearBtn">Clear</button>
+      </div>
+    </div>
+    <div id="logList"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="settings" hidden>
+    <div class="panel">
+      <h2>AI connection</h2>
+      <p>Your key is saved only in this browser on this device. It is sent directly to the AI provider you choose.</p>
+      <div class="stack">
+        <div>
+          <label for="provider">Provider</label>
+          <select id="provider">
+            <option value="gemini">Google Gemini</option>
+            <option value="anthropic">Anthropic Claude</option>
+          </select>
+        </div>
+        <div>
+          <label for="apiKey">API key</label>
+          <input type="password" id="apiKey" autocomplete="off" placeholder="Paste your key">
+        </div>
+        <div>
+          <label for="model">Model</label>
+          <input type="text" id="model">
+        </div>
+        <label class="check"><input type="checkbox" id="useGps"> Add GPS location to saved log entries</label>
+        <button class="btn primary" id="saveSet">Save settings</button>
+        <div id="setMsg" class="msg ok" hidden>Settings saved.</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Appearance</h2>
+      <div class="stack">
+        <select id="theme" aria-label="Theme">
+          <option value="">Match my phone</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <footer>AI identification can be wrong. Confirm with your CRP, field staff or a local entomologist before acting.</footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const DEFAULT_MODELS = { gemini: "gemini-2.5-flash", anthropic: "claude-sonnet-5-5" };
+const SKEY = "purugu.settings", LKEY = "purugu.log";
+
+function load(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+let settings = Object.assign({ provider:"gemini", apiKey:"", model:"", useGps:false, theme:"", lang:"te" }, load(SKEY, {}));
+let img = null;      // {b64, thumb}
+let current = null;  // last result
+
+/* ---------- Tabs ---------- */
+function showTab(name){
+  document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
+  ["identify","log","settings"].forEach(id => $("#"+id).hidden = id !== name);
+  if(name === "log") renderLog();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+
+/* ---------- Settings ---------- */
+function applyTheme(){ if(settings.theme) document.documentElement.dataset.theme = settings.theme; else delete document.documentElement.dataset.theme; }
+function fillSettings(){
+  $("#provider").value = settings.provider;
+  $("#apiKey").value = settings.apiKey;
+  $("#model").value = settings.model || DEFAULT_MODELS[settings.provider];
+  $("#useGps").checked = settings.useGps;
+  $("#theme").value = settings.theme;
+  $("#lang").value = settings.lang;
+}
+$("#provider").onchange = e => { $("#model").value = DEFAULT_MODELS[e.target.value]; };
+$("#saveSet").onclick = () => {
+  settings.provider = $("#provider").value;
+  settings.apiKey = $("#apiKey").value.trim();
+  settings.model = $("#model").value.trim() || DEFAULT_MODELS[settings.provider];
+  settings.useGps = $("#useGps").checked;
+  save(SKEY, settings);
+  $("#setMsg").hidden = false; setTimeout(() => $("#setMsg").hidden = true, 2000);
+  if(settings.useGps && navigator.geolocation) navigator.geolocation.getCurrentPosition(()=>{}, ()=>{});
+};
+$("#theme").onchange = e => { settings.theme = e.target.value; save(SKEY, settings); applyTheme(); };
+$("#lang").onchange = e => { settings.lang = e.target.value; save(SKEY, settings); };
+
+/* ---------- Image handling ---------- */
+function resize(image, max, q){
+  const s = Math.min(1, max / Math.max(image.naturalWidth, image.naturalHeight));
+  const c = document.createElement("canvas");
+  c.width = Math.round(image.naturalWidth * s); c.height = Math.round(image.naturalHeight * s);
+  c.getContext("2d").drawImage(image, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", q);
+}
+function onFile(e){
+  const f = e.target.files && e.target.files[0]; if(!f) return;
+  const url = URL.createObjectURL(f); const im = new Image();
+  im.onload = () => {
+    const full = resize(im, 1280, .85);
+    img = { b64: full.split(",")[1], thumb: resize(im, 220, .7) };
+    $("#preview").src = full; $("#preview").hidden = false; $("#hint").hidden = true;
+    $("#goBtn").disabled = false; $("#result").innerHTML = ""; $("#msg").hidden = true; current = null;
+    URL.revokeObjectURL(url);
+  };
+  im.onerror = () => showMsg("This file could not be opened as a photo. Try a JPG or PNG.");
+  im.src = url; e.target.value = "";
+}
+$("#camIn").onchange = onFile; $("#galIn").onchange = onFile;
+
+function showMsg(t, ok){ const m = $("#msg"); m.textContent = t; m.className = "msg" + (ok ? " ok" : ""); m.hidden = false; }
+
+/* ---------- AI prompt ---------- */
+const SYSTEM = `You are an agricultural entomologist advising farmers in Andhra Pradesh, India, who follow Andhra Pradesh Community Managed Natural Farming (APCNF). They use no synthetic pesticides.
+Look at the photo. It may show an insect (any life stage), mite, spider, other arthropod, or crop damage caused by one.
+Identify it as precisely as the photo allows. Decide if it is a crop pest, a beneficial (natural enemy or pollinator), or harmless.
+For pests, recommend only natural-farming measures used in APCNF, such as: Neemastram, Agniastram, Brahmastram, Dashaparni kashayam, sour buttermilk spray, chilli-garlic extract, yellow or blue sticky traps, pheromone traps, light traps, bird perches, trap crops and border crops (marigold, castor, maize, cowpea), hand picking, and conserving natural enemies. Give realistic preparation steps with quantities for 1 acre where possible.
+Never recommend synthetic chemical pesticides. If the photo is unclear, say so, set confidence to "low", and explain how to take a better photo.
+Reply with ONLY a JSON object, no markdown, in exactly this shape:
+{
+ "subject": "insect" | "damage" | "other",
+ "verdict": "pest" | "beneficial" | "harmless" | "unknown",
+ "common_name_en": string,
+ "common_name_te": string (Telugu script; local farmer name if known),
+ "scientific_name": string,
+ "order_family": string,
+ "life_stage": string,
+ "confidence": "high" | "medium" | "low",
+ "how_identified": string,
+ "crops_affected": [string],
+ "damage": string,
+ "when_to_act": string (economic threshold or simple field rule),
+ "natural_remedies": [ { "name": string, "when": string, "ingredients": [string], "steps": [string] } ],
+ "other_measures": [string],
+ "protect_beneficials": string,
+ "lookalikes": string,
+ "photo_tips": string
+}
+For beneficial or harmless insects, natural_remedies must be an empty array; explain in protect_beneficials how the farmer can keep them on the farm.`;
+
+function userPrompt(){
+  const lang = settings.lang === "te" ? "Telugu (Telugu script)" : "simple English";
+  const crop = $("#crop").value.trim(), note = $("#note").value.trim();
+  return `Write every text value in ${lang}, except common_name_en and scientific_name which stay in English. Keep sentences short and practical for a farmer.
+${crop ? "Crop: " + crop + "." : "Crop not given."}
+${note ? "Farmer's note: " + note : ""}`;
+}
+
+async function callAI(){
+  const p = settings.provider, key = settings.apiKey, model = settings.model || DEFAULT_MODELS[p];
+  if(p === "anthropic"){
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{ "content-type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+      body: JSON.stringify({ model, max_tokens:3000, system:SYSTEM,
+        messages:[{ role:"user", content:[
+          { type:"image", source:{ type:"base64", media_type:"image/jpeg", data:img.b64 } },
+          { type:"text", text:userPrompt() } ] }] })
+    });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error?.message || ("Request failed with status " + r.status));
+    return (d.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+  } else {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
+      method:"POST", headers:{ "content-type":"application/json" },
+      body: JSON.stringify({
+        system_instruction:{ parts:[{ text:SYSTEM }] },
+        contents:[{ parts:[ { inline_data:{ mime_type:"image/jpeg", data:img.b64 } }, { text:userPrompt() } ] }],
+        generationConfig:{ responseMimeType:"application/json", temperature:0.3 }
+      })
+    });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error?.message || ("Request failed with status " + r.status));
+    return (d.candidates?.[0]?.content?.parts || []).map(x => x.text || "").join("");
+  }
+}
+
+function parseJSON(t){
+  t = t.replace(/```json|```/g, "").trim();
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if(a < 0 || b < 0) throw new Error("The AI reply was not in the expected format. Try again.");
+  return JSON.parse(t.slice(a, b + 1));
+}
+
+$("#goBtn").onclick = async () => {
+  if(!img) return;
+  if(!settings.apiKey){ showMsg("Add your API key in Settings to start identifying."); setTimeout(() => showTab("settings"), 900); return; }
+  const btn = $("#goBtn"); btn.disabled = true; btn.textContent = "Looking closely…";
+  $("#finder").classList.add("scanning"); $("#msg").hidden = true; $("#result").innerHTML = "";
+  try{
+    const res = parseJSON(await callAI());
+    current = { id: Date.now(), time: new Date().toISOString(), crop: $("#crop").value.trim(), note: $("#note").value.trim(), thumb: img.thumb, result: res };
+    renderResult(current, true);
+    $("#result").scrollIntoView({ behavior:"smooth", block:"start" });
+  }catch(e){
+    showMsg("Identification failed: " + e.message);
+  }finally{
+    btn.disabled = false; btn.textContent = "Identify"; $("#finder").classList.remove("scanning");
+  }
+};
+
+/* ---------- Render result ---------- */
+const VERDICT = {
+  pest:{ en:"Pest", te:"హానికర పురుగు" },
+  beneficial:{ en:"Farmer's friend", te:"రైతు మిత్ర పురుగు" },
+  harmless:{ en:"Harmless", te:"హాని లేదు" },
+  unknown:{ en:"Not sure", te:"స్పష్టంగా తెలియలేదు" }
+};
+const H = {
+  te:{ stage:"దశ", conf:"నమ్మకం", how:"ఎలా గుర్తించాం", crops:"ఆశించే పంటలు", damage:"నష్టం", act:"ఎప్పుడు చర్య తీసుకోవాలి", rem:"ప్రకృతి వ్యవసాయ పరిష్కారాలు", other:"ఇతర చర్యలు", friends:"మిత్ర పురుగులను కాపాడండి", look:"ఇలాంటివే కనిపించేవి", tips:"మంచి ఫోటో కోసం", ing:"కావలసినవి", save:"లాగ్‌లో సేవ్ చేయండి", saved:"సేవ్ అయింది", again:"కొత్త ఫోటో", high:"ఎక్కువ", medium:"మధ్యస్థం", low:"తక్కువ" },
+  en:{ stage:"Stage", conf:"Confidence", how:"How it was identified", crops:"Crops it attacks", damage:"Damage", act:"When to act", rem:"Natural farming remedies", other:"Other measures", friends:"Protect the friendly insects", look:"Looks similar to", tips:"For a better photo", ing:"You need", save:"Save to log", saved:"Saved", again:"New photo", high:"High", medium:"Medium", low:"Low" }
+};
+
+function renderResult(entry, fresh){
+  const r = entry.result || {}, v = VERDICT[r.verdict] ? r.verdict : "unknown";
+  const L = settings.lang === "te" ? H.te : H.en;
+  const vt = settings.lang === "te" ? VERDICT[v].te : VERDICT[v].en;
+  const list = a => Array.isArray(a) && a.length ? `<ul>${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  const blk = (t, body) => body ? `<div class="block"><h3>${t}</h3>${body}</div>` : "";
+  const para = s => s ? `<p>${esc(s)}</p>` : "";
+
+  const remedies = (r.natural_remedies || []).map(m => `
+    <div class="remedy">
+      <h4>${esc(m.name)}</h4>
+      ${m.when ? `<div class="when">${esc(m.when)}</div>` : ""}
+      ${m.ingredients?.length ? `<div class="ing"><b>${L.ing}:</b> ${m.ingredients.map(esc).join(", ")}</div>` : ""}
+      ${m.steps?.length ? `<ol>${m.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
+    </div>`).join("");
+
+  const crops = r.crops_affected?.length ? `<div class="chips">${r.crops_affected.map(c => `<span class="chip">${esc(c)}</span>`).join("")}</div>` : "";
+
+  $("#result").innerHTML = `
+    <div class="verdict ${v}">
+      <span class="stamp">${esc(vt)}</span>
+      <h2>${esc(r.common_name_en || "Unidentified")}</h2>
+      ${r.common_name_te ? `<div class="te-name">${esc(r.common_name_te)}</div>` : ""}
+      ${r.scientific_name ? `<div class="sci">${esc(r.scientific_name)}${r.order_family ? ` <span style="font-style:normal">(${esc(r.order_family)})</span>` : ""}</div>` : ""}
+      <div class="facts">
+        ${r.life_stage ? `<span><b>${L.stage}:</b> ${esc(r.life_stage)}</span>` : ""}
+        ${r.confidence ? `<span><b>${L.conf}:</b> ${esc(L[r.confidence] || r.confidence)}</span>` : ""}
+      </div>
+    </div>
+    ${blk(L.how, para(r.how_identified))}
+    ${blk(L.crops, crops)}
+    ${blk(L.damage, para(r.damage))}
+    ${blk(L.act, para(r.when_to_act))}
+    ${remedies ? `<div class="block"><h3>${L.rem}</h3>${remedies}</div>` : ""}
+    ${blk(L.other, list(r.other_measures))}
+    ${blk(L.friends, para(r.protect_beneficials))}
+    ${blk(L.look, para(r.lookalikes))}
+    ${r.confidence === "low" ? blk(L.tips, para(r.photo_tips)) : ""}
+    <div class="actions">
+      <button class="btn" id="newBtn">${L.again}</button>
+      <button class="btn primary" style="font-size:17px;min-height:50px" id="saveBtn" ${fresh ? "" : "disabled"}>${fresh ? L.save : L.saved}</button>
+    </div>
+    <p class="caution">AI identification can be wrong. Check with your CRP or field staff before spraying.</p>`;
+
+  $("#newBtn").onclick = resetIdentify;
+  $("#saveBtn").onclick = () => saveEntry(entry, L);
+}
+
+function resetIdentify(){
+  img = null; current = null;
+  $("#preview").hidden = true; $("#hint").hidden = false; $("#goBtn").disabled = true;
+  $("#result").innerHTML = ""; $("#msg").hidden = true; $("#note").value = "";
+  window.scrollTo({ top:0, behavior:"smooth" });
+}
+
+function saveEntry(entry, L){
+  const btn = $("#saveBtn"); btn.disabled = true;
+  const finish = () => {
+    const log = load(LKEY, []); log.unshift(entry);
+    if(save(LKEY, log)){ btn.textContent = L.saved; }
+    else{ btn.disabled = false; showMsg("Storage is full. Export your log as CSV, then clear old entries."); }
+  };
+  if(settings.useGps && navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      p => { entry.lat = +p.coords.latitude.toFixed(6); entry.lon = +p.coords.longitude.toFixed(6); finish(); },
+      () => finish(), { enableHighAccuracy:true, timeout:10000 });
+  } else finish();
+}
+
+/* ---------- Log ---------- */
+function renderLog(){
+  const log = load(LKEY, []), el = $("#logList");
+  if(!log.length){ el.innerHTML = `<div class="empty">No saved finds yet. Identify an insect and tap “Save to log”.</div>`; return; }
+  el.innerHTML = log.map((e, i) => {
+    const r = e.result || {}, v = VERDICT[r.verdict] ? r.verdict : "unknown";
+    const d = new Date(e.time).toLocaleString("en-IN", { day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+    return `<button class="entry" data-i="${i}">
+      <img src="${e.thumb}" alt="">
+      <div><div class="t"><span class="dot ${v}"></span>${esc(r.common_name_en || "Unidentified")}</div>
+      <div class="s">${esc(r.common_name_te || "")}</div>
+      <div class="s">${esc(d)}${e.crop ? ", " + esc(e.crop) : ""}${e.lat ? ", " + e.lat + ", " + e.lon : ""}</div></div>
+    </button>`;
+  }).join("");
+  el.querySelectorAll(".entry").forEach(b => b.onclick = () => {
+    const e = load(LKEY, [])[+b.dataset.i];
+    showTab("identify");
+    $("#preview").src = e.thumb; $("#preview").hidden = false; $("#hint").hidden = true;
+    $("#goBtn").disabled = true; img = null;
+    renderResult(e, false);
+  });
+}
+
+$("#clearBtn").onclick = () => {
+  if(confirm("Delete all saved finds from this device? Export CSV first if you need them.")){ save(LKEY, []); renderLog(); }
+};
+
+$("#csvBtn").onclick = () => {
+  const log = load(LKEY, []);
+  if(!log.length){ alert("The log is empty."); return; }
+  const cols = ["date_time","latitude","longitude","crop","farmer_note","verdict","common_name_en","common_name_te","scientific_name","order_family","life_stage","confidence","crops_affected","remedies"];
+  const q = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
+  const rows = log.map(e => { const r = e.result || {}; return [
+    e.time, e.lat, e.lon, e.crop, e.note, r.verdict, r.common_name_en, r.common_name_te, r.scientific_name, r.order_family,
+    r.life_stage, r.confidence, (r.crops_affected || []).join("; "), (r.natural_remedies || []).map(m => m.name).join("; ")
+  ].map(q).join(","); });
+  const blob = new Blob(["\uFEFF" + cols.join(",") + "\n" + rows.join("\n")], { type:"text/csv;charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "purugu_log_" + new Date().toISOString().slice(0,10) + ".csv"; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+/* ---------- Start ---------- */
+applyTheme(); fillSettings();
+</script>
+</body>
+</html>
